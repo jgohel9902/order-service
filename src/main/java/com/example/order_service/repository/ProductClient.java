@@ -2,13 +2,22 @@ package com.example.order_service.repository;
 
 import com.example.order_service.entity.Product;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.*;
 
-@FeignClient(name= "product-service")
-public interface ProductClient extends JpaRepository<Product,Integer> {
+import java.util.List;
 
-    @GetMapping("/products/test")
-    String getProducts();
+@FeignClient(
+        name = "product-service",
+        url = "https://productservice-i4lz.onrender.com"
+)
+public interface ProductClient  {
 
+    @GetMapping("/api/products")
+    List<Product> findAll();
+
+    @GetMapping("/api/products/{id}")
+    Product findById(@PathVariable("id") Integer id);
+
+    @PostMapping("/api/products")
+    Product save(@RequestBody Product product);
 }
