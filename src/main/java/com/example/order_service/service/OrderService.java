@@ -8,93 +8,101 @@ import java.util.List;
 
 @Service
 public class OrderService {
+
     private final ProductClient productClient;
 
-    //Constructor
     public OrderService(ProductClient productClient) {
         this.productClient = productClient;
     }
 
-    //-----------------------API Operations related to the order service-----------------------//
-    //Return list of all products
-    public List<Product> GetAllProducts(){
+    // ---------------------------------------------------------
+    // GET ALL PRODUCTS
+    // ---------------------------------------------------------
+    public List<Product> getAllProducts() {
         return productClient.findAll();
     }
 
-    //Get stock for specific product
-    public Integer GetProductStock(Integer productId){
-        //If the product doesn't exist, return 0
-        //This is a failsafe
-        if (!productClient.findById(productId).isPresent()){
-            System.out.println("Product with given ID does not exist (GetInventory)");
+    // ---------------------------------------------------------
+    // GET PRODUCT STOCK
+    // ---------------------------------------------------------
+    public Integer getProductStock(Integer productId) {
+        Product p = productClient.findById(productId);
+
+        if (p == null) {
+            System.out.println("Product not found (getProductStock)");
             return 0;
         }
-        //If the product exists, retrieve and return the product's current stock
-        else{
-            Product relevantProduct = productClient.findById(productId).get();
-            return relevantProduct.getId();
+
+        return p.getStock();
+    }
+
+    // ---------------------------------------------------------
+    // SUBTRACT STOCK
+    // ---------------------------------------------------------
+    public void subtractStock(Integer productId) {
+        Product p = productClient.findById(productId);
+
+        if (p == null) {
+            System.out.println("Product not found (subtractStock)");
+            return;
+        }
+
+        if (p.getStock() > 0) {
+            p.setStock(p.getStock() - 1);
+            productClient.save(p);
         }
     }
 
-    //Update inventory (Subtract from stock when product stock is put into cart
-    public void SubtractStock(Integer productId){
-        //If the product doesn't exist, DO NOTHING
-        //This is a failsafe
-        if (!productClient.findById(productId).isPresent()){
-            System.out.println("Product with given ID does not exist! (SubtractStock)");
+    // ---------------------------------------------------------
+    // ADD STOCK
+    // ---------------------------------------------------------
+    public void addStock(Integer productId) {
+        Product p = productClient.findById(productId);
+
+        if (p == null) {
+            System.out.println("Product not found (addStock)");
+            return;
         }
-        //If the product exists, subtract 1 from stock
-        //To update display, please call GetInventory function!!
-        else{
-            Product relevantProduct = productClient.findById(productId).get();
-            relevantProduct.setStock(relevantProduct.getStock() - 1);
-        }
+
+        p.setStock(p.getStock() + 1);
+        productClient.save(p);
     }
 
-    //Update inventory (Add to stock when product stock is taken out of cart)
-    public void AddStock(Integer productId){
-        //If the product doesn't exist, DO NOTHING
-        //This is a failsafe
-        if (!productClient.findById(productId).isPresent()){
-            System.out.println("Product with given ID does not exist! (AddStock)");
+    // ---------------------------------------------------------
+    // BUTTON STATUS LOGIC (returns boolean instead of modifying a local variable)
+    // ---------------------------------------------------------
+    public boolean isButtonEnabled(Integer productId) {
+        Product p = productClient.findById(productId);
+
+        if (p == null) {
+            System.out.println("Product not found (isButtonEnabled)");
+            return false;
         }
-        else{
-            Product relevantProduct = productClient.findById(productId).get();
-            relevantProduct.setStock(relevantProduct.getStock() + 1);
-        }
+
+        return p.getStock() > 0;
     }
 
-    //Function used to enable/disable buttons
-    //Stock gets disabled if there is none (0) left
-    public void UpdateButtonStatus(Integer productId, Boolean buttonStatus){
-        //If the product doesn't exist, DO NOTHING
-        //This is a failsafe
-        if (!productClient.findById(productId).isPresent()){
-            System.out.println("Product with given ID does not exist! (UpdateButtonStatus)");
-        }
-        else{
-            Product relevantProduct = productClient.findById(productId).get();
-            if (relevantProduct.getStock() > 0){
-                //Enable the button
-                buttonStatus = true;
+    // ---------------------------------------------------------
+    // COMPLETE ORDER
+    // ---------------------------------------------------------
+    public String completeOrder(List<Product> cart) {
+
+        for (Product item : cart) {
+
+            Product p = productClient.findById(item.getId());
+
+            if (p == null) {
+                System.out.println("Item missing in product-service (completeOrder)");
+                continue;
             }
-            else{
-                //disable the button
-                buttonStatus = false;
+
+            if (p.getStock() > 0) {
+                p.setStock(p.getStock() - 1);
+                productClient.save(p);
             }
         }
-    }
 
-    //Update all inventory and update the order service
-    public String CompleteOrder(List<Product> cart){
-        //Subtract stock from items in the cart and update the database
-        for (Product product : cart){
-            SubtractStock(product.getId());
-            productClient.save(product);
-        }
-
-        //Return the delivery status to a made up location
-        //This is arbitrary
-        return "Ordered products being delivered to A1B 2C3 Kitchener, Ontario.";
+        return "Order placed successfully! Delivery to Kitchener, Ontario.";
     }
 }
+
